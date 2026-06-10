@@ -1,122 +1,656 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>커미션 프로필 — 몽환 파스텔 블루</title>
 <!--
   ============================================================
-  아트머그 커스텀 사이드 메뉴 (몽환 파스텔 블루)
-  → 부모 페이지의 '커스텀 메뉴/코드' 영역에 그대로 붙여넣으세요.
-  → 상세설명(iframe)과 postMessage로 연동됩니다.
-     · 메뉴 클릭  → 해당 섹션으로 부드럽게 스크롤
-     · 스크롤     → 현재 섹션 메뉴 자동 하이라이트 + 등장 애니메이션 신호
-     · iframe 높이 자동 맞춤
+  아트머그 커미션 상세 페이지 (몽환·소프트 / 파스텔 블루)
+  - 순수 HTML/CSS/바닐라 JS (에디터 붙여넣기 호환)
+  - 사이드 커스텀 메뉴(6섹션) + 상세 콘텐츠 연동
+  - 메뉴 클릭 시: 같은 문서면 직접 스크롤 / iframe이면 postMessage
+  - 스크롤 등장 애니메이션 + 메뉴 자동 하이라이트
   ============================================================
 -->
 <style>
+/* ===== 폰트 ===== */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css');
 @font-face { font-family:'Paperlogy'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-6SemiBold.woff2') format('woff2'); font-weight:600; font-display:swap; }
 @font-face { font-family:'Paperlogy'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2') format('woff2'); font-weight:700; font-display:swap; }
 
-.amg-menu-container{
-  --b700:#2F66CC; --b600:#3B82E8; --b500:#5BA0F2; --b400:#84BBF7; --b200:#D3E8FE; --b100:#E9F3FF; --b50:#F4F9FF;
-  position:fixed; top:50%; right:24px; transform:translateY(-50%); width:132px;
-  background:#fff; border:1px solid var(--b200); border-radius:18px;
-  box-shadow:0 10px 36px rgba(91,160,242,.18); font-family:'Paperlogy',sans-serif; z-index:9999;
-  overflow:hidden; display:flex; flex-direction:column;
+/* ===== 토큰 ===== */
+.cmz{
+  --blue-700:#2F66CC; --blue-600:#3B82E8; --blue-500:#5BA0F2; --blue-400:#84BBF7;
+  --blue-300:#AED4FB; --blue-200:#D3E8FE; --blue-100:#E9F3FF; --blue-50:#F4F9FF;
+  --peri:#A9B8FF; --peri-100:#ECEEFF; --mint:#BFE9E4; --lilac:#D9CCFB; --cream:#FFF2D9; --peach:#FFD9DE;
+  --ink:#2B3A52; --ink-soft:#5E6E88; --muted:#92A0B8; --line:#E4EDF8;
+  --paper:#FBFDFF; --white:#FFFFFF;
+  --grad-dream:linear-gradient(135deg,#EAF4FF 0%,#EDEBFF 55%,#F6F1FF 100%);
+  --grad-prim:linear-gradient(135deg,#6BAAF4 0%,#8FB8FF 50%,#A9B8FF 100%);
+  --shadow-sm:0 4px 16px rgba(91,160,242,.10);
+  --shadow-md:0 12px 36px rgba(91,160,242,.14);
+  --shadow-lg:0 20px 60px rgba(108,140,210,.18);
+  --r-lg:28px; --r-md:20px; --r-sm:14px;
+  font-family:'Pretendard',sans-serif;
+  color:var(--ink);
 }
-@media (max-width:1000px){ .amg-menu-container{ display:none; } }
-.amg-menu-header{ background:linear-gradient(135deg,#6BAAF4,#9AB6FF); border-bottom:1px solid #DCEAFB;
-  color:#fff; font-size:11px; font-weight:700; text-align:center; padding:13px 0; letter-spacing:4px; }
-.amg-menu-list{ list-style:none; margin:0; padding:6px; display:flex; flex-direction:column; gap:0; }
-.amg-menu-btn{ padding:11px 12px 11px 14px; text-align:left; font-size:12.5px; font-weight:600; color:#9AA8C0;
-  cursor:pointer; transition:color .15s, background .15s; position:relative; background:transparent; border:none;
-  border-radius:11px; width:100%; font-family:'Paperlogy',sans-serif; display:flex; align-items:center; gap:8px; }
-.amg-menu-btn::after{ content:''; width:6px; height:6px; border-radius:50%; background:#E4EDF8;
-  border:1.5px solid var(--b200); flex-shrink:0; margin-left:auto; transition:.15s; }
-.amg-menu-btn:hover{ color:var(--b600); background:var(--b50); }
-.amg-menu-btn:hover::after{ background:var(--b200); border-color:var(--b400); }
-.amg-menu-btn.active{ color:var(--b700); font-weight:700; background:var(--b100); }
-.amg-menu-btn.active::before{ content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px;
-  background:var(--b500); border-radius:0 3px 3px 0; }
-.amg-menu-btn.active::after{ background:var(--b500); border-color:var(--b700); }
-.amg-menu-top{ border-top:1px solid var(--b100); padding:11px 0; text-align:center; font-size:10px; font-weight:700;
-  letter-spacing:1px; color:#9AA8C0; cursor:pointer; background:var(--b50); transition:.15s;
-  border-left:none; border-right:none; border-bottom:none; width:100%; font-family:'Paperlogy',sans-serif; }
-.amg-menu-top:hover{ background:var(--b100); color:var(--b600); }
-</style>
+.cmz *{ box-sizing:border-box; margin:0; padding:0; }
+.cmz{
+  background:
+    radial-gradient(900px 500px at 80% -5%, #EAF1FF 0%, rgba(234,241,255,0) 60%),
+    radial-gradient(800px 460px at 0% 30%, #F0ECFF 0%, rgba(240,236,255,0) 55%),
+    var(--paper);
+  padding:0 0 120px;
+  overflow-x:hidden;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.cmz img{ max-width:100%; display:block; }
+.cmz a{ color:inherit; text-decoration:none; }
+.cmz .wrap{ max-width:860px; margin:0 auto; padding:0 28px; }
+.cmz .display{ font-family:'Paperlogy',sans-serif; font-weight:700; letter-spacing:-.01em; }
 
-<div class="amg-menu-container">
-  <div class="amg-menu-header">MENU</div>
-  <div class="amg-menu-list">
-    <button class="amg-menu-btn" data-target="sec-intro">🌥️ 소개</button>
-    <button class="amg-menu-btn" data-target="sec-event">🎁 이벤트</button>
-    <button class="amg-menu-btn" data-target="sec-notice">📢 공지사항</button>
-    <button class="amg-menu-btn" data-target="sec-work">🎨 작업 안내</button>
-    <button class="amg-menu-btn" data-target="sec-portfolio">🖼️ 포트폴리오</button>
-    <button class="amg-menu-btn" data-target="sec-form">✏️ 신청 양식</button>
-  </div>
-  <button class="amg-menu-top" data-action="top">▲ TOP</button>
+/* ===== 섹션 공통 ===== */
+.cmz section{ scroll-margin-top:24px; padding:74px 0; position:relative; }
+.cmz .sec-tag{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:'Paperlogy',sans-serif; font-weight:700; font-size:13px; letter-spacing:.14em;
+  color:var(--blue-600); background:var(--blue-100);
+  padding:7px 15px 7px 13px; border-radius:999px; margin-bottom:18px;
+}
+.cmz .sec-tag::before{ content:''; width:7px; height:7px; border-radius:50%; background:var(--blue-500); box-shadow:0 0 0 4px rgba(91,160,242,.18); }
+.cmz .sec-title{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:32px; line-height:1.28; letter-spacing:-.02em; }
+.cmz .sec-sub{ color:var(--ink-soft); font-size:15.5px; margin-top:12px; max-width:560px; text-wrap:pretty; }
+.cmz .sec-head{ margin-bottom:38px; }
+
+/* 둥근 구름/스파클 장식 */
+.cmz .deco{ position:absolute; pointer-events:none; z-index:0; opacity:.9; }
+.cmz .spark{ color:var(--peri); font-size:20px; line-height:1; filter:drop-shadow(0 4px 8px rgba(140,150,230,.25)); }
+
+/* ===== 등장 애니메이션 ===== */
+.cmz .reveal{ opacity:0; transform:translateY(26px); transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+.cmz .reveal.in{ opacity:1; transform:none; }
+.cmz .reveal.d1{ transition-delay:.08s; } .cmz .reveal.d2{ transition-delay:.16s; }
+.cmz .reveal.d3{ transition-delay:.24s; } .cmz .reveal.d4{ transition-delay:.32s; }
+@media (prefers-reduced-motion: reduce){ .cmz .reveal{ opacity:1 !important; transform:none !important; } }
+
+/* ===== 플레이스홀더 ===== */
+.cmz .ph{ position:relative; border-radius:var(--r-md); overflow:hidden; display:flex; align-items:center; justify-content:center;
+  background:var(--grad-prim); }
+.cmz .ph .ph-label{ position:absolute; left:12px; bottom:12px; z-index:2; white-space:nowrap;
+  font-size:11px; font-weight:600; letter-spacing:.02em; color:#fff;
+  background:rgba(43,58,82,.34); backdrop-filter:blur(4px); padding:5px 11px; border-radius:999px; }
+.cmz .ph .ph-emoji{ font-family:'Paperlogy',sans-serif; font-weight:700; color:rgba(255,255,255,.92); font-size:30px; text-shadow:0 6px 16px rgba(40,60,110,.25); }
+.cmz .ph::after{ content:''; position:absolute; inset:0;
+  background:repeating-linear-gradient(135deg, rgba(255,255,255,.10) 0 14px, rgba(255,255,255,0) 14px 28px); }
+
+/* =====================================================
+   HERO / INTRO
+====================================================== */
+.cmz #sec-intro{ padding-top:40px; }
+.cmz .hero{
+  position:relative; border-radius:var(--r-lg); overflow:hidden;
+  background:var(--grad-dream); box-shadow:var(--shadow-md);
+  border:1px solid #fff; padding:48px 44px 46px;
+}
+.cmz .hero-cloud{ position:absolute; border-radius:999px; background:#fff; filter:blur(2px); opacity:.55; }
+.cmz .hero-grid{ position:relative; z-index:2; display:grid; grid-template-columns:1fr 220px; gap:34px; align-items:center; }
+.cmz .hero-ava{ width:220px; height:220px; border-radius:34px; background:var(--grad-prim);
+  box-shadow:var(--shadow-md); border:5px solid #fff; position:relative; display:flex; align-items:center; justify-content:center; }
+.cmz .hero-ava .ph-emoji{ font-size:64px; }
+.cmz .hero-ava .badge{ position:absolute; right:-10px; bottom:-10px; background:#fff; color:var(--blue-600);
+  font-family:'Paperlogy',sans-serif; font-weight:700; font-size:12px; padding:8px 13px; border-radius:999px; box-shadow:var(--shadow-sm); }
+.cmz .hero h1{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:40px; line-height:1.18; letter-spacing:-.025em; }
+.cmz .hero .hi{ display:inline-block; font-size:14px; font-weight:600; color:var(--blue-600); white-space:nowrap;
+  background:#fff; padding:7px 15px; border-radius:999px; box-shadow:var(--shadow-sm); margin-bottom:16px; }
+.cmz .hero .lead{ color:var(--ink-soft); font-size:16px; margin-top:14px; max-width:420px; text-wrap:pretty; }
+.cmz .chips{ display:flex; flex-wrap:wrap; gap:9px; margin-top:22px; }
+.cmz .chip{ font-size:13px; font-weight:600; color:var(--blue-700); background:#fff; white-space:nowrap;
+  border:1px solid var(--blue-200); padding:8px 14px; border-radius:999px; box-shadow:0 2px 8px rgba(91,160,242,.07); }
+.cmz .chip.solid{ background:var(--grad-prim); color:#fff; border-color:transparent; }
+.cmz .hero-stats{ position:relative; z-index:2; display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:30px; }
+.cmz .stat{ background:rgba(255,255,255,.7); border:1px solid #fff; border-radius:var(--r-sm); padding:16px 18px; backdrop-filter:blur(6px); }
+.cmz .stat b{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:24px; color:var(--blue-700); display:block; }
+.cmz .stat span{ font-size:12.5px; color:var(--muted); }
+.cmz .status-row{ display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; position:relative; z-index:2; }
+.cmz .status{ display:inline-flex; align-items:center; gap:9px; font-size:14px; font-weight:600;
+  background:#fff; padding:11px 18px; border-radius:999px; box-shadow:var(--shadow-sm); }
+.cmz .dot{ width:9px; height:9px; border-radius:50%; }
+.cmz .dot.on{ background:#37C98B; box-shadow:0 0 0 4px rgba(55,201,139,.18); animation:pulse 2.4s infinite; }
+.cmz .dot.warn{ background:#FFB23E; box-shadow:0 0 0 4px rgba(255,178,62,.18); }
+@keyframes pulse{ 0%,100%{ box-shadow:0 0 0 4px rgba(55,201,139,.18);} 50%{ box-shadow:0 0 0 7px rgba(55,201,139,.06);} }
+
+/* =====================================================
+   EVENT
+====================================================== */
+.cmz .event-grid{ display:grid; grid-template-columns:1.25fr 1fr; gap:18px; }
+.cmz .ev-card{ position:relative; border-radius:var(--r-md); padding:30px 30px; overflow:hidden;
+  color:#fff; box-shadow:var(--shadow-md); min-height:200px; display:flex; flex-direction:column; justify-content:flex-end; }
+.cmz .ev-main{ background:var(--grad-prim); }
+.cmz .ev-side{ background:linear-gradient(150deg,#8E9DF5,#B7A6F7); }
+.cmz .ev-card .ev-kicker{ font-size:12px; font-weight:700; letter-spacing:.12em; opacity:.92; margin-bottom:auto; }
+.cmz .ev-card h3{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:27px; line-height:1.25; letter-spacing:-.02em; }
+.cmz .ev-card .ev-sale{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:46px; line-height:1; margin-bottom:8px; }
+.cmz .ev-card p{ font-size:13.5px; opacity:.92; margin-top:10px; }
+.cmz .ev-card .ev-pill{ position:absolute; top:22px; right:22px; background:rgba(255,255,255,.22); white-space:nowrap;
+  backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.4); padding:6px 13px; border-radius:999px; font-size:12px; font-weight:700; }
+.cmz .ev-blob{ position:absolute; border-radius:50%; background:rgba(255,255,255,.16); }
+
+/* =====================================================
+   NOTICE
+====================================================== */
+.cmz .notice-card{ background:var(--white); border:1px solid var(--line); border-radius:var(--r-lg);
+  box-shadow:var(--shadow-sm); padding:14px; }
+.cmz .notice-item{ display:flex; gap:16px; align-items:flex-start; padding:20px 20px; border-radius:var(--r-md); transition:background .2s; }
+.cmz .notice-item + .notice-item{ border-top:1px solid var(--line); }
+.cmz .notice-item:hover{ background:var(--blue-50); }
+.cmz .ni-ico{ flex-shrink:0; width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+  font-size:20px; background:var(--blue-100); }
+.cmz .ni-ico.ok{ background:#E4F7EF; } .cmz .ni-ico.no{ background:#FFE9EC; } .cmz .ni-ico.tip{ background:var(--peri-100); }
+.cmz .ni-body h4{ font-family:'Paperlogy',sans-serif; font-weight:600; font-size:16.5px; display:flex; align-items:center; gap:10px; }
+.cmz .ni-body p{ color:var(--ink-soft); font-size:14.5px; margin-top:5px; text-wrap:pretty; }
+.cmz .tagdate{ font-size:11.5px; font-weight:700; color:var(--blue-600); background:var(--blue-100); padding:3px 9px; border-radius:999px; }
+.cmz .do-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px; }
+.cmz .do-card{ background:#fff; border:1px solid var(--line); border-radius:var(--r-md); padding:22px 24px; box-shadow:var(--shadow-sm); }
+.cmz .do-card h4{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:16px; display:flex; align-items:center; gap:9px; margin-bottom:14px; }
+.cmz .do-card.ok h4{ color:#1FA972; } .cmz .do-card.no h4{ color:#E5607A; }
+.cmz .do-card ul{ list-style:none; display:flex; flex-direction:column; gap:9px; }
+.cmz .do-card li{ font-size:14px; color:var(--ink-soft); display:flex; gap:9px; align-items:flex-start; }
+.cmz .do-card li::before{ content:''; flex-shrink:0; width:6px; height:6px; border-radius:50%; margin-top:8px; }
+.cmz .do-card.ok li::before{ background:#37C98B; } .cmz .do-card.no li::before{ background:#F0879C; }
+
+/* =====================================================
+   WORK / PRICE
+====================================================== */
+.cmz .price-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+.cmz .price-card{ position:relative; background:#fff; border:1px solid var(--line); border-radius:var(--r-lg);
+  padding:30px 26px 28px; box-shadow:var(--shadow-sm); transition:transform .3s, box-shadow .3s; }
+.cmz .price-card:hover{ transform:translateY(-6px); box-shadow:var(--shadow-md); }
+.cmz .price-card.feat{ background:var(--grad-dream); border-color:#fff; box-shadow:var(--shadow-md); }
+.cmz .price-card .pc-best{ position:absolute; top:18px; right:18px; background:var(--grad-prim); color:#fff;
+  font-size:11px; font-weight:700; padding:5px 11px; border-radius:999px; }
+.cmz .pc-ico{ width:52px; height:52px; border-radius:16px; background:var(--blue-100); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:16px; }
+.cmz .price-card.feat .pc-ico{ background:#fff; }
+.cmz .pc-name{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:19px; }
+.cmz .pc-desc{ font-size:13px; color:var(--muted); margin-top:4px; min-height:34px; }
+.cmz .pc-price{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:30px; color:var(--blue-700); margin:14px 0 4px; }
+.cmz .pc-price small{ font-size:14px; color:var(--muted); font-weight:600; }
+.cmz .pc-list{ list-style:none; margin-top:16px; padding-top:16px; border-top:1px dashed var(--line); display:flex; flex-direction:column; gap:8px; }
+.cmz .pc-list li{ font-size:13.5px; color:var(--ink-soft); display:flex; gap:8px; }
+.cmz .pc-list li b{ color:var(--ink); font-weight:600; white-space:nowrap; flex-shrink:0; }
+.cmz .pc-list li::before{ content:'✓'; color:var(--blue-500); font-weight:700; }
+
+.cmz .info-strip{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:18px; }
+.cmz .info-pill{ background:#fff; border:1px solid var(--line); border-radius:var(--r-md); padding:18px 20px; box-shadow:var(--shadow-sm); }
+.cmz .info-pill span{ font-size:12.5px; color:var(--muted); display:block; margin-bottom:6px; }
+.cmz .info-pill b{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:18px; color:var(--ink); }
+
+.cmz .steps{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:18px; counter-reset:st; }
+.cmz .step{ position:relative; background:#fff; border:1px solid var(--line); border-radius:var(--r-md); padding:24px 16px 20px; text-align:center; box-shadow:var(--shadow-sm); }
+.cmz .step .st-num{ width:34px; height:34px; margin:0 auto 12px; border-radius:50%; background:var(--grad-prim); color:#fff;
+  font-family:'Paperlogy',sans-serif; font-weight:700; font-size:15px; display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-sm); }
+.cmz .step .st-em{ font-size:22px; margin-bottom:6px; }
+.cmz .step b{ font-family:'Paperlogy',sans-serif; font-weight:600; font-size:14.5px; }
+.cmz .step p{ font-size:12px; color:var(--muted); margin-top:3px; }
+.cmz .step:not(:last-child)::after{ content:'→'; position:absolute; right:-9px; top:50%; transform:translateY(-50%);
+  color:var(--blue-300); font-size:16px; z-index:3; }
+
+/* =====================================================
+   PORTFOLIO
+====================================================== */
+.cmz .pf-tabs{ display:flex; flex-wrap:wrap; gap:9px; margin-bottom:24px; }
+.cmz .pf-tab{ font-family:'Pretendard'; font-size:13.5px; font-weight:600; color:var(--ink-soft);
+  background:#fff; border:1px solid var(--line); padding:9px 18px; border-radius:999px; cursor:pointer; transition:all .2s; }
+.cmz .pf-tab:hover{ border-color:var(--blue-300); color:var(--blue-600); }
+.cmz .pf-tab.active{ background:var(--grad-prim); color:#fff; border-color:transparent; box-shadow:var(--shadow-sm); }
+.cmz .pf-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.cmz .pf-item{ position:relative; aspect-ratio:1/1; border-radius:var(--r-md); overflow:hidden; cursor:pointer;
+  box-shadow:var(--shadow-sm); transition:transform .3s, box-shadow .3s; }
+.cmz .pf-item:hover{ transform:translateY(-5px) scale(1.01); box-shadow:var(--shadow-md); }
+.cmz .pf-item.tall{ aspect-ratio:auto; grid-row:span 2; }
+.cmz .pf-fill{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.cmz .pf-fill::after{ content:''; position:absolute; inset:0; background:repeating-linear-gradient(135deg, rgba(255,255,255,.12) 0 16px, rgba(255,255,255,0) 16px 32px); }
+.cmz .pf-fill .ph-emoji{ font-size:34px; }
+.cmz .pf-item .pf-cap{ position:absolute; left:0; right:0; bottom:0; z-index:3; padding:18px 16px 14px;
+  background:linear-gradient(transparent, rgba(40,55,85,.5)); color:#fff; font-size:13px; font-weight:600;
+  opacity:0; transform:translateY(8px); transition:.3s; }
+.cmz .pf-item:hover .pf-cap{ opacity:1; transform:none; }
+.cmz .pf-note{ text-align:center; margin-top:22px; font-size:13px; color:var(--muted); }
+
+/* =====================================================
+   FORM
+====================================================== */
+.cmz .form-card{ background:#fff; border:1px solid var(--line); border-radius:var(--r-lg); box-shadow:var(--shadow-md); overflow:hidden; }
+.cmz .form-head{ background:var(--grad-dream); padding:30px 36px; border-bottom:1px solid var(--line); }
+.cmz .form-head h3{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:22px; }
+.cmz .form-head p{ font-size:14px; color:var(--ink-soft); margin-top:8px; }
+.cmz .form-body{ padding:30px 36px 34px; display:flex; flex-direction:column; gap:26px; }
+.cmz .field label{ display:flex; align-items:center; gap:8px; font-family:'Paperlogy',sans-serif; font-weight:600; font-size:15px; margin-bottom:12px; }
+.cmz .field label .req{ color:#E5607A; font-size:13px; }
+.cmz .opt-row{ display:flex; flex-wrap:wrap; gap:10px; }
+.cmz .opt{ font-size:13.5px; font-weight:600; color:var(--ink-soft); background:var(--blue-50);
+  border:1.5px solid var(--line); padding:11px 18px; border-radius:999px; cursor:pointer; transition:all .18s; user-select:none; }
+.cmz .opt:hover{ border-color:var(--blue-300); }
+.cmz .opt.sel{ background:var(--grad-prim); color:#fff; border-color:transparent; box-shadow:var(--shadow-sm); }
+.cmz .cmz-input, .cmz textarea{ width:100%; font-family:'Pretendard'; font-size:14.5px; color:var(--ink);
+  background:var(--blue-50); border:1.5px solid var(--line); border-radius:var(--r-sm); padding:14px 16px; transition:border .2s, background .2s; resize:vertical; }
+.cmz .cmz-input:focus, .cmz textarea:focus{ outline:none; border-color:var(--blue-400); background:#fff; box-shadow:0 0 0 4px rgba(91,160,242,.12); }
+.cmz textarea{ min-height:108px; line-height:1.6; }
+.cmz .two{ display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.cmz .agree{ display:flex; gap:13px; align-items:flex-start; background:var(--peri-100); border:1px solid #E0E2FB;
+  border-radius:var(--r-md); padding:18px 20px; cursor:pointer; }
+.cmz .agree .box{ flex-shrink:0; width:24px; height:24px; border-radius:8px; border:2px solid var(--blue-300);
+  background:#fff; display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; transition:.2s; margin-top:1px; }
+.cmz .agree.on .box{ background:var(--grad-prim); border-color:transparent; }
+.cmz .agree .atxt b{ font-family:'Paperlogy',sans-serif; font-weight:600; font-size:14.5px; display:block; }
+.cmz .agree .atxt p{ font-size:13px; color:var(--ink-soft); margin-top:4px; }
+.cmz .form-actions{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.cmz .btn{ font-family:'Paperlogy',sans-serif; font-weight:700; font-size:16px; border:none; cursor:pointer; white-space:nowrap;
+  padding:16px 28px; border-radius:999px; transition:transform .2s, box-shadow .2s, opacity .2s; display:inline-flex; align-items:center; gap:9px; }
+.cmz .btn.primary{ background:var(--grad-prim); color:#fff; box-shadow:var(--shadow-md); }
+.cmz .btn.primary:hover{ transform:translateY(-3px); box-shadow:var(--shadow-lg); }
+.cmz .btn.primary:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+.cmz .btn.ghost{ background:#fff; color:var(--blue-700); border:1.5px solid var(--blue-200); }
+.cmz .form-note{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+
+/* 토스트 */
+.cmz .toast{ position:fixed; left:50%; bottom:40px; transform:translateX(-50%) translateY(30px);
+  background:var(--ink); color:#fff; font-family:'Paperlogy'; font-weight:600; font-size:14.5px;
+  padding:15px 26px; border-radius:999px; box-shadow:var(--shadow-lg); z-index:99999;
+  opacity:0; pointer-events:none; transition:.4s cubic-bezier(.2,.8,.2,1); display:flex; align-items:center; gap:9px; }
+.cmz .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ===== 푸터 마감 ===== */
+.cmz .cmz-foot{ text-align:center; padding:50px 0 0; color:var(--muted); font-size:12.5px; }
+.cmz .cmz-foot .sparkrow{ font-size:18px; color:var(--blue-300); margin-bottom:14px; letter-spacing:8px; }
+
+/* ===== 반응형 ===== */
+@media (max-width:760px){
+  .cmz .wrap{ padding:0 18px; }
+  .cmz .sec-title{ font-size:26px; }
+  .cmz .hero{ padding:34px 24px; }
+  .cmz .hero-grid{ grid-template-columns:1fr; text-align:center; }
+  .cmz .hero-ava{ margin:0 auto; width:160px; height:160px; }
+  .cmz .hero h1{ font-size:30px; }
+  .cmz .hero .lead, .cmz .chips{ justify-content:center; }
+  .cmz .hero-stats{ grid-template-columns:1fr 1fr 1fr; }
+  .cmz .event-grid,.cmz .price-grid,.cmz .do-grid,.cmz .two{ grid-template-columns:1fr; }
+  .cmz .info-strip{ grid-template-columns:1fr 1fr; }
+  .cmz .steps{ grid-template-columns:1fr 1fr; }
+  .cmz .step:not(:last-child)::after{ display:none; }
+  .cmz .pf-grid{ grid-template-columns:1fr 1fr; }
+  .cmz .pf-item.tall{ grid-row:span 1; aspect-ratio:1/1; }
+  .cmz .form-head,.cmz .form-body{ padding-left:22px; padding-right:22px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 상세 콘텐츠 (iframe 내부에 들어갑니다 / 사이드 메뉴는 별도 파일) ===== -->
+<div class="cmz" id="cmz-root">
+
+  <!-- ============ INTRO ============ -->
+  <section id="sec-intro">
+    <div class="wrap">
+      <div class="hero reveal">
+        <div class="hero-cloud" style="width:180px;height:90px;top:-30px;left:8%;"></div>
+        <div class="hero-cloud" style="width:130px;height:70px;bottom:14%;right:6%;"></div>
+        <div class="hero-cloud" style="width:90px;height:50px;top:24%;right:30%;opacity:.4;"></div>
+        <div class="deco spark" style="top:30px;right:46px;">✦</div>
+        <div class="deco spark" style="bottom:40px;left:40px;font-size:14px;">✦</div>
+        <div class="hero-grid">
+          <div>
+            <span class="hi">☁︎ 안녕하세요, 의뢰자님!</span>
+            <h1>몽글몽글<br>이모티콘·굿즈 작가<br><span style="color:var(--blue-600)">하늘</span> 입니다</h1>
+            <p class="lead">파스텔 톤의 둥글둥글 귀여운 캐릭터를 그려요. 카카오·라인 이모티콘부터 스티커·키링 굿즈 도안까지, 의뢰자님의 캐릭터를 사랑스럽게 만들어 드릴게요 ☁︎</p>
+            <div class="chips">
+              <span class="chip solid">이모티콘</span>
+              <span class="chip">굿즈 도안</span>
+              <span class="chip">캐릭터 디자인</span>
+              <span class="chip">스티커</span>
+            </div>
+          </div>
+          <div class="hero-ava">
+            <span class="ph-emoji">☁︎</span>
+            <span class="badge">♡ 작가 프로필</span>
+          </div>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><b>120+</b><span>완료한 작업</span></div>
+          <div class="stat"><b>4.9★</b><span>평균 평점</span></div>
+          <div class="stat"><b>24h</b><span>평균 응답</span></div>
+        </div>
+        <div class="status-row">
+          <span class="status"><i class="dot on"></i>현재 의뢰 받는 중</span>
+          <span class="status"><i class="dot warn"></i>이번 달 슬롯 2자리 남음</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ EVENT ============ -->
+  <section id="sec-event">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-tag">EVENT</span>
+        <h2 class="sec-title">지금 진행 중인 이벤트 🎁</h2>
+        <p class="sec-sub">기간 한정 혜택을 놓치지 마세요. 이벤트 적용을 원하시면 문의 시 꼭 말씀해 주세요!</p>
+      </div>
+      <div class="event-grid">
+        <div class="ev-card ev-main reveal d1">
+          <div class="ev-blob" style="width:160px;height:160px;top:-50px;right:-30px;"></div>
+          <div class="ev-blob" style="width:90px;height:90px;bottom:-20px;left:30%;"></div>
+          <span class="ev-pill">~ 6/30 까지</span>
+          <span class="ev-kicker">OPEN 기념 이벤트</span>
+          <div class="ev-sale">10% OFF</div>
+          <h3>첫 의뢰 의뢰자님께<br>전 작업 10% 할인!</h3>
+          <p>처음 의뢰해 주시는 분께 드리는 작은 선물이에요 ☁︎</p>
+        </div>
+        <div class="ev-card ev-side reveal d2">
+          <div class="ev-blob" style="width:120px;height:120px;top:-40px;right:-20px;"></div>
+          <span class="ev-pill">상시</span>
+          <span class="ev-kicker">SET 할인</span>
+          <h3>이모티콘 16종<br>세트 의뢰 시 15%</h3>
+          <p>낱개보다 세트가 더 귀엽고 알뜰해요!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NOTICE ============ -->
+  <section id="sec-notice">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-tag">NOTICE</span>
+        <h2 class="sec-title">꼭 읽어주세요 📢</h2>
+        <p class="sec-sub">원활한 작업을 위해 의뢰 전 아래 공지사항을 확인 부탁드려요.</p>
+      </div>
+      <div class="notice-card reveal d1">
+        <div class="notice-item">
+          <div class="ni-ico tip">💌</div>
+          <div class="ni-body">
+            <h4>의뢰 전 문의는 필수예요 <span class="tagdate">중요</span></h4>
+            <p>견적·일정은 캐릭터 난이도에 따라 달라져요. 결제 전 '작가에게 문의하기'로 먼저 상담해 주세요.</p>
+          </div>
+        </div>
+        <div class="notice-item">
+          <div class="ni-ico ok">🗓️</div>
+          <div class="ni-body">
+            <h4>작업 일정 안내 <span class="tagdate">6월</span></h4>
+            <p>현재 평균 7~14일 소요되며, 급하신 일정은 미리 말씀해 주시면 조율해 드릴게요.</p>
+          </div>
+        </div>
+        <div class="notice-item">
+          <div class="ni-ico no">🔒</div>
+          <div class="ni-body">
+            <h4>저작권·연락처 안내</h4>
+            <p>모든 작업물의 저작권은 작가에게 있으며 상업적 사용 범위는 협의해요. 결제 전 연락처 교환·직거래는 금지입니다.</p>
+          </div>
+        </div>
+      </div>
+      <div class="do-grid">
+        <div class="do-card ok reveal d2">
+          <h4>✿ 이런 작업 가능해요</h4>
+          <ul>
+            <li>카카오·라인 이모티콘 (움짤 포함)</li>
+            <li>스티커·키링·아크릴 굿즈 도안</li>
+            <li>캐릭터 디자인 및 SD 캐릭터</li>
+            <li>기존 캐릭터 리터칭·표정 추가</li>
+          </ul>
+        </div>
+        <div class="do-card no reveal d3">
+          <h4>✘ 이런 작업은 어려워요</h4>
+          <ul>
+            <li>실사·극사실체 일러스트</li>
+            <li>타 작가 그림체 모작</li>
+            <li>과도한 폭력·선정적 표현</li>
+            <li>저작권 침해 소지가 있는 캐릭터</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ WORK / PRICE ============ -->
+  <section id="sec-work">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-tag">PRICE</span>
+        <h2 class="sec-title">작업 안내 🎨</h2>
+        <p class="sec-sub">아래는 기본 가격이며, 캐릭터 수·난이도·사용 범위에 따라 견적이 달라질 수 있어요.</p>
+      </div>
+      <div class="price-grid">
+        <div class="price-card reveal d1">
+          <div class="pc-ico">🐰</div>
+          <div class="pc-name">캐릭터 1종</div>
+          <div class="pc-desc">단일 캐릭터 정면 일러스트</div>
+          <div class="pc-price">30,000<small> 원~</small></div>
+          <ul class="pc-list">
+            <li><b>채색</b> 풀컬러</li>
+            <li><b>수정</b> 2회 무료</li>
+            <li><b>기간</b> 약 5~7일</li>
+          </ul>
+        </div>
+        <div class="price-card feat reveal d2">
+          <span class="pc-best">인기 ♡</span>
+          <div class="pc-ico">🧸</div>
+          <div class="pc-name">이모티콘 세트</div>
+          <div class="pc-desc">표정·동작 16종 패키지</div>
+          <div class="pc-price">240,000<small> 원~</small></div>
+          <ul class="pc-list">
+            <li><b>구성</b> 멈춰있는 16종</li>
+            <li><b>제안서</b> 시안 1종 제공</li>
+            <li><b>기간</b> 약 14~21일</li>
+          </ul>
+        </div>
+        <div class="price-card reveal d3">
+          <div class="pc-ico">🔑</div>
+          <div class="pc-name">굿즈 도안</div>
+          <div class="pc-desc">키링·스티커·아크릴용</div>
+          <div class="pc-price">50,000<small> 원~</small></div>
+          <ul class="pc-list">
+            <li><b>형식</b> 인쇄용 고해상도</li>
+            <li><b>도무송</b> 라인 포함</li>
+            <li><b>기간</b> 약 7~10일</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="info-strip">
+        <div class="info-pill reveal d1"><span>제출 파일</span><b>PNG · PSD</b></div>
+        <div class="info-pill reveal d2"><span>해상도</span><b>300 dpi</b></div>
+        <div class="info-pill reveal d3"><span>기본 수정</span><b>2회 무료</b></div>
+        <div class="info-pill reveal d4"><span>추가 수정</span><b>회당 5,000원</b></div>
+      </div>
+
+      <div class="sec-head reveal" style="margin:54px 0 18px;">
+        <h3 class="display" style="font-size:21px;">진행 순서는 이렇게 돼요 ☁︎</h3>
+      </div>
+      <div class="steps">
+        <div class="step reveal d1"><div class="st-num">1</div><div class="st-em">💬</div><b>문의</b><p>견적·일정 상담</p></div>
+        <div class="step reveal d1"><div class="st-num">2</div><div class="st-em">🛒</div><b>주문·결제</b><p>금액 확정 후</p></div>
+        <div class="step reveal d2"><div class="st-num">3</div><div class="st-em">✏️</div><b>시안</b><p>러프 스케치 확인</p></div>
+        <div class="step reveal d2"><div class="st-num">4</div><div class="st-em">🎨</div><b>작업</b><p>채색·수정 진행</p></div>
+        <div class="step reveal d3"><div class="st-num">5</div><div class="st-em">🎁</div><b>전달</b><p>원본 파일 수령</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PORTFOLIO ============ -->
+  <section id="sec-portfolio">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-tag">PORTFOLIO</span>
+        <h2 class="sec-title">포트폴리오 🖼️</h2>
+        <p class="sec-sub">그동안 작업한 결과물 일부예요. (이미지는 예시 자리이며 실제 작업물로 교체해 주세요)</p>
+      </div>
+      <div class="pf-tabs reveal d1">
+        <div class="pf-tab active" data-cat="all">전체</div>
+        <div class="pf-tab" data-cat="emoji">이모티콘</div>
+        <div class="pf-tab" data-cat="goods">굿즈 도안</div>
+        <div class="pf-tab" data-cat="char">캐릭터</div>
+      </div>
+      <div class="pf-grid" id="pfGrid"></div>
+      <p class="pf-note reveal">☁︎ 더 많은 작업물은 작가방에서 확인하실 수 있어요</p>
+    </div>
+  </section>
+
+  <!-- ============ FORM ============ -->
+  <section id="sec-form">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="sec-tag">REQUEST</span>
+        <h2 class="sec-title">신청 양식 ✏️</h2>
+        <p class="sec-sub">아래 내용을 채우고 <b>복사하기</b>를 누르면, '작가에게 문의하기'에 붙여넣을 수 있어요. (실제 결제·문의는 플랫폼을 통해 진행됩니다)</p>
+      </div>
+      <div class="form-card reveal d1">
+        <div class="form-head">
+          <h3>의뢰 신청서 ☁︎</h3>
+          <p>정확히 적어주실수록 견적과 일정이 빨라져요!</p>
+        </div>
+        <div class="form-body">
+          <div class="field">
+            <label>작업 종류 <span class="req">*복수 선택 가능</span></label>
+            <div class="opt-row" data-group="kind">
+              <div class="opt">이모티콘 (멈춰있는)</div>
+              <div class="opt">이모티콘 (움짤)</div>
+              <div class="opt">굿즈 도안</div>
+              <div class="opt">캐릭터 디자인</div>
+              <div class="opt">스티커</div>
+              <div class="opt">기타</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>캐릭터 · 레퍼런스 설명 <span class="req">*</span></label>
+            <textarea id="fDesc" placeholder="원하는 캐릭터의 컨셉, 분위기, 색감, 표정/동작 구성, 참고 이미지 링크 등을 자유롭게 적어주세요 ☁︎"></textarea>
+          </div>
+
+          <div class="two">
+            <div class="field">
+              <label>예산 <span class="req">*</span></label>
+              <input class="cmz-input" id="fBudget" type="text" placeholder="예) 25만원 / 협의 가능">
+            </div>
+            <div class="field">
+              <label>희망 일정 <span class="req">*</span></label>
+              <input class="cmz-input" id="fDate" type="text" placeholder="예) 7월 중순까지">
+            </div>
+          </div>
+
+          <div class="field agree" id="fAgree">
+            <div class="box">✓</div>
+            <div class="atxt">
+              <b>주의·필수 동의 사항</b>
+              <p>결제 전 연락처 교환·직거래 금지, 작업물 저작권은 작가에게 있으며 상업적 사용 범위는 협의함에 동의합니다.</p>
+            </div>
+          </div>
+
+          <div>
+            <div class="form-actions">
+              <button class="btn primary" id="fCopy" disabled>📋 신청 내용 복사하기</button>
+              <button class="btn ghost" id="fReset">초기화</button>
+            </div>
+            <p class="form-note">* 복사 후 상단의 '작가에게 문의하기' 버튼을 눌러 붙여넣어 주세요.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmz-foot reveal">
+        <div class="sparkrow">☁︎ ✦ ☁︎</div>
+        의뢰해 주셔서 감사해요. 사랑스러운 캐릭터로 보답할게요 ♡<br>
+        © 하늘 · 모든 이미지의 저작권은 작가에게 있습니다.
+      </div>
+    </div>
+  </section>
+
 </div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"><span>✅</span><span id="toastMsg">복사되었어요!</span></div>
 
 <script>
 (function(){
-  var buttons = document.querySelectorAll('.amg-menu-btn');
-  var topBtn  = document.querySelector('.amg-menu-top');
-  var sections = [];   // 상세설명(iframe)에서 전달받는 섹션 위치
-  var iframe = null;
+  var root = document.getElementById('cmz-root');
 
-  /* 상세설명이 들어있는 iframe 찾기 (보이는 가장 큰 iframe) */
-  function pickIframe(){
-    var f = document.getElementById('detail-iframe');
-    if(f) return f;
-    var list = [].slice.call(document.querySelectorAll('iframe')).filter(function(x){
-      return x.offsetParent !== null && x.clientHeight > 120;
+  /* ===== 0. 포트폴리오 카드 생성 ===== */
+  var pf = [
+    {cat:'emoji', label:'기쁨이 이모티콘 세트', em:'🧸', g:'linear-gradient(140deg,#6BAAF4,#A9B8FF)', tall:true},
+    {cat:'char',  label:'구름토끼 캐릭터', em:'🐰', g:'linear-gradient(140deg,#84BBF7,#BFE9E4)'},
+    {cat:'goods', label:'아크릴 키링 도안', em:'🔑', g:'linear-gradient(140deg,#8E9DF5,#D9CCFB)'},
+    {cat:'emoji', label:'졸린곰 움짤', em:'😴', g:'linear-gradient(140deg,#5BA0F2,#84BBF7)'},
+    {cat:'goods', label:'스티커 팩 12종', em:'✨', g:'linear-gradient(140deg,#A9B8FF,#FFD9DE)'},
+    {cat:'char',  label:'마스코트 SD', em:'🐣', g:'linear-gradient(140deg,#6BAAF4,#FFF2D9)', tall:true},
+    {cat:'emoji', label:'하트냥 이모티콘', em:'💙', g:'linear-gradient(140deg,#84BBF7,#A9B8FF)'},
+    {cat:'goods', label:'포토카드 도안', em:'🖼️', g:'linear-gradient(140deg,#9AB6FF,#BFE9E4)'},
+  ];
+  var grid = document.getElementById('pfGrid');
+  function renderPf(cat){
+    grid.innerHTML = '';
+    pf.filter(function(p){ return cat==='all' || p.cat===cat; }).forEach(function(p,i){
+      var d = document.createElement('div');
+      d.className = 'pf-item reveal' + (p.tall && cat==='all' ? ' tall':'');
+      d.style.transitionDelay = (0.05*i)+'s';
+      d.innerHTML = '<div class="pf-fill" style="background:'+p.g+'"><span class="ph-emoji">'+p.em+'</span></div>'+
+                    '<div class="pf-cap">'+p.label+'</div>'+
+                    '<div class="ph-label" style="position:absolute;left:12px;top:12px;z-index:3;white-space:nowrap;background:rgba(43,58,82,.28);color:#fff;font-size:10px;font-weight:600;padding:4px 9px;border-radius:999px;">예시 이미지</div>';
+      grid.appendChild(d);
     });
-    list.sort(function(a,b){ return b.clientHeight - a.clientHeight; });
-    return list[0] || document.querySelector('iframe');
+    requestAnimationFrame(checkRevealLocal);
   }
-  function iframeTop(){
-    return iframe ? (iframe.getBoundingClientRect().top + window.pageYOffset) : 0;
+  renderPf('all');
+  document.querySelectorAll('.pf-tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      document.querySelectorAll('.pf-tab').forEach(function(x){ x.classList.remove('active'); });
+      t.classList.add('active');
+      renderPf(t.getAttribute('data-cat'));
+    });
+  });
+
+  /* ===== 1. 등장 애니메이션 + 부모 연동 (iframe 대응) ===== */
+  var inIframe = (window.parent && window.parent !== window);
+  var sectionIds = ['sec-intro','sec-event','sec-notice','sec-work','sec-portfolio','sec-form'];
+
+  // 자기 스크롤 기준 등장(단독/내부 스크롤용)
+  function checkRevealLocal(){
+    var vh = window.innerHeight || document.documentElement.clientHeight;
+    document.querySelectorAll('.cmz .reveal:not(.in)').forEach(function(el){
+      var r = el.getBoundingClientRect();
+      if(r.top < vh*0.92 && r.bottom > 0) el.classList.add('in');
+    });
   }
-  /* 부드러운 스크롤(네이티브 smooth 미지원 환경 대비 자체 구현) */
-  function animateScroll(to){
-    to = Math.max(0, to);
-    var start = window.pageYOffset, diff = to - start, dur = 520, t0 = null;
-    if(Math.abs(diff) < 2) return;
-    function step(ts){
-      if(!t0) t0 = ts;
-      var p = Math.min((ts - t0) / dur, 1);
-      var e = p < .5 ? 2*p*p : 1 - Math.pow(-2*p + 2, 2) / 2;
-      window.scrollTo(0, start + diff*e);
-      if(p < 1) requestAnimationFrame(step);
-    }
-    requestAnimationFrame(step);
+  // 부모 뷰포트 기준 등장(자동높이 iframe용) — 좌표는 이 문서 콘텐츠 기준
+  function revealByViewport(viewTop, viewH){
+    document.querySelectorAll('.cmz .reveal:not(.in)').forEach(function(el){
+      var t = el.getBoundingClientRect().top + window.pageYOffset;
+      if(t < viewTop + viewH*0.92 && (t + el.offsetHeight) > viewTop - 40) el.classList.add('in');
+    });
+  }
+  function revealAll(){
+    document.querySelectorAll('.cmz .reveal').forEach(function(el){ el.classList.add('in'); });
   }
 
-  /* 부모 스크롤 위치를 iframe에 전달 → 등장 애니메이션 구동 */
-  function relayScroll(){
-    if(!iframe || !iframe.contentWindow) return;
-    iframe.contentWindow.postMessage({
-      type:'cmzParentScroll',
-      viewTop: window.pageYOffset - iframeTop(),
-      viewH:   window.innerHeight
-    }, '*');
-  }
-  /* 현재 보이는 섹션으로 메뉴 하이라이트 */
-  function highlight(){
-    if(!sections.length) return;
-    var probe = window.pageYOffset + window.innerHeight*0.42 - iframeTop();
-    var cur = sections[0].id;
-    sections.forEach(function(s){ if(s.top <= probe) cur = s.id; });
-    buttons.forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-target') === cur); });
+  // 부모(커스텀 메뉴)로 높이 + 섹션 위치 전달
+  function postInfo(){
+    if(!inIframe) return;
+    var secs = sectionIds.map(function(id){
+      var s = document.getElementById(id);
+      return { id:id, top: s ? Math.round(s.getBoundingClientRect().top + window.pageYOffset) : 0 };
+    });
+    window.parent.postMessage({ type:'cmzInfo', height:document.body.scrollHeight, sections:secs }, '*');
   }
 
-  /* iframe → 부모 : 높이/섹션 정보 수신 */
+  // 부모로부터 메시지 수신
+  var gotParentScroll = false;
   window.addEventListener('message', function(e){
     if(!e.data) return;
-    if(e.data.type === 'cmzInfo'){
-      if(!iframe) iframe = pickIframe();
-      if(Array.isArray(e.data.sections)) sections = e.data.sections;
-      if(e.data.height && iframe) iframe.style.height = e.data.height + 'px';
-      relayScroll(); highlight();
-    } else if(e.data.type === 'resize' && e.data.height){ // 구버전 호환
-      if(!iframe) iframe = pickIframe();
-      if(iframe) iframe.style.height = e.data.height + 'px';
+    if(e.data.type === 'cmzParentScroll'){
+      gotParentScroll = true;
+      revealByViewport(e.data.viewTop || 0, e.data.viewH || window.innerHeight);
+    } else if(e.data.type === 'scrollTo' && e.data.id){
+      // 폴백: 자체 스크롤(내부 스크롤 가능한 경우)
+      var el = document.getElementById(e.data.id);
+      if(el) window.scrollTo({ top: el.getBoundingClientRect().top + window.pageYOffset - 16, behavior:'smooth' });
     }
   });
 
@@ -124,32 +658,83 @@
   function onScroll(){
     if(ticking) return;
     ticking = true;
-    requestAnimationFrame(function(){ relayScroll(); highlight(); ticking = false; });
+    requestAnimationFrame(function(){ checkRevealLocal(); ticking = false; });
   }
   window.addEventListener('scroll', onScroll, {passive:true});
-  window.addEventListener('resize', onScroll);
+  window.addEventListener('resize', function(){ checkRevealLocal(); postInfo(); });
+  window.addEventListener('load', function(){ checkRevealLocal(); postInfo(); });
+  checkRevealLocal(); postInfo();
+  setTimeout(function(){ checkRevealLocal(); postInfo(); }, 300);
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(postInfo).observe(document.body);
 
-  /* 메뉴 클릭 → 부모 창을 해당 섹션 위치로 스크롤 */
-  buttons.forEach(function(b){
-    b.addEventListener('click', function(){
-      if(!iframe) iframe = pickIframe();
-      var id = b.getAttribute('data-target');
-      var s = sections.filter(function(x){ return x.id === id; })[0];
-      if(s){
-        animateScroll(iframeTop() + s.top - 16);
-      } else if(iframe && iframe.contentWindow){
-        iframe.contentWindow.postMessage({ type:'scrollTo', id:id }, '*'); // 폴백
-      }
+  // iframe 내부인데 부모 스크롤 메시지가 안 오면(메뉴 미설치 등) 안전하게 전체 표시
+  if(inIframe){
+    setTimeout(function(){ if(!gotParentScroll) revealAll(); }, 1300);
+  }
+
+  /* ===== 4. 신청 양식 인터랙션 ===== */
+  var selKinds = [];
+  document.querySelectorAll('.opt-row[data-group="kind"] .opt').forEach(function(o){
+    o.addEventListener('click', function(){
+      o.classList.toggle('sel');
+      var v = o.textContent.trim();
+      if(o.classList.contains('sel')) selKinds.push(v);
+      else selKinds = selKinds.filter(function(x){ return x!==v; });
     });
   });
-  topBtn.addEventListener('click', function(){
-    animateScroll(0);
+  var agreed = false;
+  var agreeEl = document.getElementById('fAgree');
+  var copyBtn = document.getElementById('fCopy');
+  agreeEl.addEventListener('click', function(){
+    agreed = !agreed;
+    agreeEl.classList.toggle('on', agreed);
+    copyBtn.disabled = !agreed;
   });
 
-  /* 초기화 */
-  function init(){ iframe = pickIframe(); relayScroll(); highlight(); }
-  window.addEventListener('load', init);
-  setTimeout(init, 400);
-  setTimeout(init, 1200);
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    document.getElementById('toastMsg').textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._t);
+    t._t = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+  }
+
+  copyBtn.addEventListener('click', function(){
+    var desc = document.getElementById('fDesc').value.trim();
+    var budget = document.getElementById('fBudget').value.trim();
+    var date = document.getElementById('fDate').value.trim();
+    var text =
+      '[ 커미션 의뢰 신청서 ]\n'+
+      '─────────────────\n'+
+      '· 작업 종류 : ' + (selKinds.length ? selKinds.join(', ') : '(선택 안 함)') + '\n'+
+      '· 캐릭터/레퍼런스 : ' + (desc || '-') + '\n'+
+      '· 예산 : ' + (budget || '-') + '\n'+
+      '· 희망 일정 : ' + (date || '-') + '\n'+
+      '· 주의·필수 동의 : 동의함 ✓\n'+
+      '─────────────────';
+    function ok(){ showToast('복사 완료! 문의하기에 붙여넣어 주세요 ☁︎'); }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok).catch(function(){ fallback(text); ok(); });
+    } else { fallback(text); ok(); }
+  });
+  function fallback(text){
+    var ta = document.createElement('textarea');
+    ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+  }
+  document.getElementById('fReset').addEventListener('click', function(){
+    document.getElementById('fDesc').value='';
+    document.getElementById('fBudget').value='';
+    document.getElementById('fDate').value='';
+    selKinds = [];
+    document.querySelectorAll('.opt-row[data-group="kind"] .opt').forEach(function(o){ o.classList.remove('sel'); });
+    agreed=false; agreeEl.classList.remove('on'); copyBtn.disabled=true;
+    showToast('초기화했어요');
+  });
 })();
 </script>
+
+</body>
+</html>
