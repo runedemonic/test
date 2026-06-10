@@ -1,0 +1,155 @@
+<!--
+  ============================================================
+  아트머그 커스텀 사이드 메뉴 (몽환 파스텔 블루)
+  → 부모 페이지의 '커스텀 메뉴/코드' 영역에 그대로 붙여넣으세요.
+  → 상세설명(iframe)과 postMessage로 연동됩니다.
+     · 메뉴 클릭  → 해당 섹션으로 부드럽게 스크롤
+     · 스크롤     → 현재 섹션 메뉴 자동 하이라이트 + 등장 애니메이션 신호
+     · iframe 높이 자동 맞춤
+  ============================================================
+-->
+<style>
+@font-face { font-family:'Paperlogy'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-6SemiBold.woff2') format('woff2'); font-weight:600; font-display:swap; }
+@font-face { font-family:'Paperlogy'; src:url('https://cdn.jsdelivr.net/gh/projectnoonnu/2408-3@1.0/Paperlogy-7Bold.woff2') format('woff2'); font-weight:700; font-display:swap; }
+
+.amg-menu-container{
+  --b700:#2F66CC; --b600:#3B82E8; --b500:#5BA0F2; --b400:#84BBF7; --b200:#D3E8FE; --b100:#E9F3FF; --b50:#F4F9FF;
+  position:fixed; top:50%; right:24px; transform:translateY(-50%); width:132px;
+  background:#fff; border:1px solid var(--b200); border-radius:18px;
+  box-shadow:0 10px 36px rgba(91,160,242,.18); font-family:'Paperlogy',sans-serif; z-index:9999;
+  overflow:hidden; display:flex; flex-direction:column;
+}
+@media (max-width:1000px){ .amg-menu-container{ display:none; } }
+.amg-menu-header{ background:linear-gradient(135deg,#6BAAF4,#9AB6FF); border-bottom:1px solid #DCEAFB;
+  color:#fff; font-size:11px; font-weight:700; text-align:center; padding:13px 0; letter-spacing:4px; }
+.amg-menu-list{ list-style:none; margin:0; padding:6px; display:flex; flex-direction:column; gap:0; }
+.amg-menu-btn{ padding:11px 12px 11px 14px; text-align:left; font-size:12.5px; font-weight:600; color:#9AA8C0;
+  cursor:pointer; transition:color .15s, background .15s; position:relative; background:transparent; border:none;
+  border-radius:11px; width:100%; font-family:'Paperlogy',sans-serif; display:flex; align-items:center; gap:8px; }
+.amg-menu-btn::after{ content:''; width:6px; height:6px; border-radius:50%; background:#E4EDF8;
+  border:1.5px solid var(--b200); flex-shrink:0; margin-left:auto; transition:.15s; }
+.amg-menu-btn:hover{ color:var(--b600); background:var(--b50); }
+.amg-menu-btn:hover::after{ background:var(--b200); border-color:var(--b400); }
+.amg-menu-btn.active{ color:var(--b700); font-weight:700; background:var(--b100); }
+.amg-menu-btn.active::before{ content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px;
+  background:var(--b500); border-radius:0 3px 3px 0; }
+.amg-menu-btn.active::after{ background:var(--b500); border-color:var(--b700); }
+.amg-menu-top{ border-top:1px solid var(--b100); padding:11px 0; text-align:center; font-size:10px; font-weight:700;
+  letter-spacing:1px; color:#9AA8C0; cursor:pointer; background:var(--b50); transition:.15s;
+  border-left:none; border-right:none; border-bottom:none; width:100%; font-family:'Paperlogy',sans-serif; }
+.amg-menu-top:hover{ background:var(--b100); color:var(--b600); }
+</style>
+
+<div class="amg-menu-container">
+  <div class="amg-menu-header">MENU</div>
+  <div class="amg-menu-list">
+    <button class="amg-menu-btn" data-target="sec-intro">🌥️ 소개</button>
+    <button class="amg-menu-btn" data-target="sec-event">🎁 이벤트</button>
+    <button class="amg-menu-btn" data-target="sec-notice">📢 공지사항</button>
+    <button class="amg-menu-btn" data-target="sec-work">🎨 작업 안내</button>
+    <button class="amg-menu-btn" data-target="sec-portfolio">🖼️ 포트폴리오</button>
+    <button class="amg-menu-btn" data-target="sec-form">✏️ 신청 양식</button>
+  </div>
+  <button class="amg-menu-top" data-action="top">▲ TOP</button>
+</div>
+
+<script>
+(function(){
+  var buttons = document.querySelectorAll('.amg-menu-btn');
+  var topBtn  = document.querySelector('.amg-menu-top');
+  var sections = [];   // 상세설명(iframe)에서 전달받는 섹션 위치
+  var iframe = null;
+
+  /* 상세설명이 들어있는 iframe 찾기 (보이는 가장 큰 iframe) */
+  function pickIframe(){
+    var f = document.getElementById('detail-iframe');
+    if(f) return f;
+    var list = [].slice.call(document.querySelectorAll('iframe')).filter(function(x){
+      return x.offsetParent !== null && x.clientHeight > 120;
+    });
+    list.sort(function(a,b){ return b.clientHeight - a.clientHeight; });
+    return list[0] || document.querySelector('iframe');
+  }
+  function iframeTop(){
+    return iframe ? (iframe.getBoundingClientRect().top + window.pageYOffset) : 0;
+  }
+  /* 부드러운 스크롤(네이티브 smooth 미지원 환경 대비 자체 구현) */
+  function animateScroll(to){
+    to = Math.max(0, to);
+    var start = window.pageYOffset, diff = to - start, dur = 520, t0 = null;
+    if(Math.abs(diff) < 2) return;
+    function step(ts){
+      if(!t0) t0 = ts;
+      var p = Math.min((ts - t0) / dur, 1);
+      var e = p < .5 ? 2*p*p : 1 - Math.pow(-2*p + 2, 2) / 2;
+      window.scrollTo(0, start + diff*e);
+      if(p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* 부모 스크롤 위치를 iframe에 전달 → 등장 애니메이션 구동 */
+  function relayScroll(){
+    if(!iframe || !iframe.contentWindow) return;
+    iframe.contentWindow.postMessage({
+      type:'cmzParentScroll',
+      viewTop: window.pageYOffset - iframeTop(),
+      viewH:   window.innerHeight
+    }, '*');
+  }
+  /* 현재 보이는 섹션으로 메뉴 하이라이트 */
+  function highlight(){
+    if(!sections.length) return;
+    var probe = window.pageYOffset + window.innerHeight*0.42 - iframeTop();
+    var cur = sections[0].id;
+    sections.forEach(function(s){ if(s.top <= probe) cur = s.id; });
+    buttons.forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-target') === cur); });
+  }
+
+  /* iframe → 부모 : 높이/섹션 정보 수신 */
+  window.addEventListener('message', function(e){
+    if(!e.data) return;
+    if(e.data.type === 'cmzInfo'){
+      if(!iframe) iframe = pickIframe();
+      if(Array.isArray(e.data.sections)) sections = e.data.sections;
+      if(e.data.height && iframe) iframe.style.height = e.data.height + 'px';
+      relayScroll(); highlight();
+    } else if(e.data.type === 'resize' && e.data.height){ // 구버전 호환
+      if(!iframe) iframe = pickIframe();
+      if(iframe) iframe.style.height = e.data.height + 'px';
+    }
+  });
+
+  var ticking = false;
+  function onScroll(){
+    if(ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){ relayScroll(); highlight(); ticking = false; });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  window.addEventListener('resize', onScroll);
+
+  /* 메뉴 클릭 → 부모 창을 해당 섹션 위치로 스크롤 */
+  buttons.forEach(function(b){
+    b.addEventListener('click', function(){
+      if(!iframe) iframe = pickIframe();
+      var id = b.getAttribute('data-target');
+      var s = sections.filter(function(x){ return x.id === id; })[0];
+      if(s){
+        animateScroll(iframeTop() + s.top - 16);
+      } else if(iframe && iframe.contentWindow){
+        iframe.contentWindow.postMessage({ type:'scrollTo', id:id }, '*'); // 폴백
+      }
+    });
+  });
+  topBtn.addEventListener('click', function(){
+    animateScroll(0);
+  });
+
+  /* 초기화 */
+  function init(){ iframe = pickIframe(); relayScroll(); highlight(); }
+  window.addEventListener('load', init);
+  setTimeout(init, 400);
+  setTimeout(init, 1200);
+})();
+</script>
